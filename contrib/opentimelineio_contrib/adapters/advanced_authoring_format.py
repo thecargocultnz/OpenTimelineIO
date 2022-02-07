@@ -135,7 +135,14 @@ def _find_source_clip(item, op_group_found=None):
     elif isinstance(item, aaf2.components.NestedScope):
         slot = item.slots[0] if len(item.slots) > 0 else None
         return _find_source_clip(slot, op_group_found)
+    elif isinstance(item, aaf2.components.Selector):
+        alt = [a for a in item.alternates.value]
+        alt = alt[0] if len(alt) > 0 else None
+        if alt: return _find_source_clip(item.alternates.value[0], op_group_found)
+        # return _find_source_clip(item.selected.value, op_group_found)
     elif isinstance(item, aaf2.components.Filler) or not item:
+        return None, None
+    elif isinstance(item, aaf2.components.Pulldown) or not item:
         return None, None
     else:
         raise AAFAdapterError("Error: _find_source_clip() parsing {} not "
@@ -222,7 +229,7 @@ def _find_mob_chain_and_timecode(source_clip, editRate):
                 op_stack = _transcribe(op_group_found, list(), editRate)
                 time_effect = op_stack.effects[0] if len(op_stack.effects) > 0 else None
 
-            time_scalar = time_effect.time_scalar if time_effect else None
+            time_scalar = time_effect.time_scalar if hasattr(time_effect, 'time_scalar') else None
             if time_scalar:
                 if source_start_multiplier:
                     err = "Error: multiple source multipliers found during search of " \
@@ -302,7 +309,7 @@ def _transcribe(item, parents, editRate):
             # this track and use it for the Timeline's global_start_time
             start_time = _find_timecode_track_start(track)
             if start_time:
-                result.global_start_time = start_time
+                result.global_start_time, metadata["IsDropFrame"] = start_time
 
     elif isinstance(item, aaf2.components.SourceClip):
         result = otio.schema.Clip()
@@ -666,6 +673,7 @@ def _find_timecode_track_start(track):
     try:
         edit_rate = fractions.Fraction(aaf_metadata["EditRate"])
         start = aaf_metadata["Segment"]["Start"]
+        drop = aaf_metadata["Segment"]["Drop"]
     except KeyError as e:
         raise AAFAdapterError(
             "Timecode missing '{}'".format(e)
@@ -676,10 +684,7 @@ def _find_timecode_track_start(track):
     else:
         rate = float(edit_rate)
 
-    return otio.opentime.RationalTime(
-        value=int(start),
-        rate=rate,
-    )
+    return (otio.opentime.RationalTime(value=int(start), rate=rate), drop)
 
 
 def _transcribe_linear_timewarp(item, parameters):
@@ -1052,7 +1057,9 @@ def _contains_something_valuable(thing):
 
     if isinstance(thing, otio.schema.Gap):
         # TODO: Are there other valuable things we should look for on a Gap?
-        return False
+        gap_metadata = thing.metadata.get('AAF')
+        if gap_metadata is not None and 'alternates' not in gap_metadata:
+            return False
 
     # anything else is presumed to be valuable
     return True
