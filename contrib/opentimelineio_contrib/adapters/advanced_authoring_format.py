@@ -513,28 +513,38 @@ def _transcribe(item, parents, editRate):
         pass
 
     elif isinstance(item, aaf2.components.Selector):
-        # If you mute a clip in media composer, it becomes one of these in the
-        # AAF.
-        result = _transcribe(
-            item.getvalue("Selected"),
-            parents + [item],
-            editRate
-        )
 
-        alternates = None
-        if hasattr(item, 'alternates'):
-            alternates = [
-                _transcribe(alt, parents + [item], editRate)
-                for alt in item.alternates
-            ]
+        # A brute force check to see if what we're dealing with is a muted track
+        if isinstance(parents[-1], aaf2.mobslots.TimelineMobSlot) and \
+                isinstance(item.getvalue('Selected'), aaf2.components.Filler):
+            alt = item.getvalue('Alternates')[0]
+            result = _transcribe(alt, parents + [item], editRate)
 
-        # muted case -- if there is only one item its muted, otherwise its
-        # a multi cam thing
-        if alternates and len(alternates) == 1:
-            metadata['muted_clip'] = True
-            result.name = str(alternates[0].name) + "_MUTED"
+        else:
+            # If you mute a clip in media composer, it becomes one of these in the
+            # AAF.
+            result = _transcribe(item.getvalue("Selected"), parents + [item], editRate)
 
-        metadata['alternates'] = alternates
+            # A Selector can have a set of alternates to designate either a multicam clip
+            # or a clip that has been muted on the timeline - here we do a ful parse on
+            # all the objects being held there
+            alternates = item.getvalue("Alternates", None)
+            if alternates is not None:
+                alternates = [
+                    _transcribe(alt, parents + [item], editRate)
+                    for alt in alternates
+                ]
+
+            # If the "Selected" object is a "Filler" object, then it is a muted clip and
+            # will result in an OTIO Gap object. This should mean that the muted clips exists
+            # in the alternates list
+            if isinstance(result, otio.schema.Gap) \
+                    and alternates is not None \
+                    and len(alternates) == 1:
+                metadata['muted_clip'] = True
+                result.name = str(alternates[0].name)
+
+            metadata['alternates'] = alternates
 
     # @TODO: There are a bunch of other AAF object types that we will
     # likely need to add support for. I'm leaving this code here to help
