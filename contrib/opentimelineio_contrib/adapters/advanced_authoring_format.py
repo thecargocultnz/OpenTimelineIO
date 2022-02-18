@@ -407,9 +407,9 @@ def _transcribe(item, parents, editRate):
             result.media_reference = media
 
         # Last check to make sure we're getting a appropriate names
-        if metadata["Name"] == "Untitled SourceClip":
+        if metadata["Name"] == "Untitled SourceClip" or metadata["Name"] is None:
             for mob in mobs:
-                if mob.name != '':
+                if mob.name != '' and mob.name is not None:
                     metadata["Name"] = mob.name
                     break
 
@@ -615,7 +615,7 @@ def _transcribe(item, parents, editRate):
     # There's a bit more we can do before we're ready to return the result.
 
     # If we didn't get a name yet, use the one we have in metadata
-    if not result.name:
+    if not result.name and metadata["Name"] is not None:
         result.name = metadata["Name"]
 
     # Attach the AAF metadata
