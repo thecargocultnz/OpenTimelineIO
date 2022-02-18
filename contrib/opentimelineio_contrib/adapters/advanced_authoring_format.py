@@ -126,7 +126,8 @@ def _find_source_clip(item, op_group_found=None):
     elif isinstance(item, aaf2.components.OperationGroup):
         return _find_source_clip(item.segments[0], item)
     elif isinstance(item, aaf2.components.Sequence):
-        comp = [c for c in item.components if not isinstance(c, aaf2.components.Filler)]
+        comp = [c for c in item.components if not isinstance(c, aaf2.components.Filler) \
+                and not isinstance(c, aaf2.components.ScopeReference)]
         comp = comp[0] if len(comp) > 0 else None
         return _find_source_clip(comp, op_group_found)
     elif isinstance(item, aaf2.components.EssenceGroup):
@@ -143,6 +144,8 @@ def _find_source_clip(item, op_group_found=None):
     elif isinstance(item, aaf2.components.Filler) or not item:
         return None, None
     elif isinstance(item, aaf2.components.Pulldown) or not item:
+        return None, None
+    elif isinstance(item, aaf2.components.ScopeReference) or not item:
         return None, None
     else:
         raise AAFAdapterError("Error: _find_source_clip() parsing {} not "
