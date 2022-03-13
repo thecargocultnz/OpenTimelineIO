@@ -298,95 +298,95 @@ def _convert_rgb_to_marker_color(rgb_dict):
     return nearest or otio.schema.MarkerColor.RED
 
 
-def _find_timecode_mobs(item):
-    mobs = [item.mob]
-
-    for c in item.walk():
-        if isinstance(c, aaf2.components.SourceClip):
-            mob = c.mob
-            if mob:
-                mobs.append(mob)
-            else:
-                continue
-        else:
-            # This could be 'EssenceGroup', 'Pulldown' or other segment
-            # subclasses
-            # For example:
-            # An EssenceGroup is a Segment that has one or more
-            # alternate choices, each of which represent different variations
-            # of one actual piece of content.
-            # According to the AAF Object Specification and Edit Protocol
-            # documents:
-            # "Typically the different representations vary in essence format,
-            # compression, or frame size. The application is responsible for
-            # choosing the appropriate implementation of the essence."
-            # It also says they should all have the same length, but
-            # there might be nested Sequences inside which we're not attempting
-            # to handle here (yet). We'll need a concrete example to ensure
-            # we're doing the right thing.
-            # TODO: Is the Timecode for an EssenceGroup correct?
-            # TODO: Try CountChoices() and ChoiceAt(i)
-            # For now, lets just skip it.
-            continue
-
-    return mobs
-
-
-def timecode_values_are_same(timecodes):
-    """
-    A SourceClip can have multiple timecode objects (for example an auxTC24
-    value that got added via the Avid Bin column). As long as they have the
-    same start and length values, they can be treated as being the same.
-    """
-    if len(timecodes) == 1:
-        return True
-
-    start_set = set()
-    length_set = set()
-
-    for timecode in timecodes:
-        start_set.add(timecode.getvalue('Start'))
-        length_set.add(timecode.getvalue('Length'))
-
-    # If all timecode objects are having same start and length we can consider
-    # them equivalent.
-    if len(start_set) == 1 and len(length_set) == 1:
-        return True
-
-    return False
-
-
-def _extract_timecode_info(mob):
-    """Given a mob with a single timecode slot, return the timecode and length
-    in that slot as a tuple
-    """
-    timecodes = [slot.segment for slot in mob.slots
-                 if isinstance(slot.segment, aaf2.components.Timecode)]
-
-    # Only use timecode if we have just one or multiple ones with same
-    # start/length.
-    if timecode_values_are_same(timecodes):
-        timecode = timecodes[0]
-        timecode_start = timecode.getvalue('Start')
-        timecode_length = timecode.getvalue('Length')
-
-        if timecode_start is None or timecode_length is None:
-            raise otio.exceptions.NotSupportedError(
-                "Unexpected timecode value(s) in mob named: `{}`."
-                " `Start`: {}, `Length`: {}".format(mob.name,
-                                                    timecode_start,
-                                                    timecode_length)
-            )
-
-        return timecode_start, timecode_length
-    elif len(timecodes) > 1:
-        raise otio.exceptions.NotSupportedError(
-            "Error: mob has more than one timecode slot with different values."
-            " This is currently not supported by the AAF adapter. Found:"
-            " {} slots,  mob name is: '{}'".format(len(timecodes), mob.name)
-        )
-    else:
-        return None
+# def _find_timecode_mobs(item):
+#     mobs = [item.mob]
+#
+#     for c in item.walk():
+#         if isinstance(c, aaf2.components.SourceClip):
+#             mob = c.mob
+#             if mob:
+#                 mobs.append(mob)
+#             else:
+#                 continue
+#         else:
+#             # This could be 'EssenceGroup', 'Pulldown' or other segment
+#             # subclasses
+#             # For example:
+#             # An EssenceGroup is a Segment that has one or more
+#             # alternate choices, each of which represent different variations
+#             # of one actual piece of content.
+#             # According to the AAF Object Specification and Edit Protocol
+#             # documents:
+#             # "Typically the different representations vary in essence format,
+#             # compression, or frame size. The application is responsible for
+#             # choosing the appropriate implementation of the essence."
+#             # It also says they should all have the same length, but
+#             # there might be nested Sequences inside which we're not attempting
+#             # to handle here (yet). We'll need a concrete example to ensure
+#             # we're doing the right thing.
+#             # TODO: Is the Timecode for an EssenceGroup correct?
+#             # TODO: Try CountChoices() and ChoiceAt(i)
+#             # For now, lets just skip it.
+#             continue
+#
+#     return mobs
+#
+#
+# def timecode_values_are_same(timecodes):
+#     """
+#     A SourceClip can have multiple timecode objects (for example an auxTC24
+#     value that got added via the Avid Bin column). As long as they have the
+#     same start and length values, they can be treated as being the same.
+#     """
+#     if len(timecodes) == 1:
+#         return True
+#
+#     start_set = set()
+#     length_set = set()
+#
+#     for timecode in timecodes:
+#         start_set.add(timecode.getvalue('Start'))
+#         length_set.add(timecode.getvalue('Length'))
+#
+#     # If all timecode objects are having same start and length we can consider
+#     # them equivalent.
+#     if len(start_set) == 1 and len(length_set) == 1:
+#         return True
+#
+#     return False
+#
+#
+# def _extract_timecode_info(mob):
+#     """Given a mob with a single timecode slot, return the timecode and length
+#     in that slot as a tuple
+#     """
+#     timecodes = [slot.segment for slot in mob.slots
+#                  if isinstance(slot.segment, aaf2.components.Timecode)]
+#
+#     # Only use timecode if we have just one or multiple ones with same
+#     # start/length.
+#     if timecode_values_are_same(timecodes):
+#         timecode = timecodes[0]
+#         timecode_start = timecode.getvalue('Start')
+#         timecode_length = timecode.getvalue('Length')
+#
+#         if timecode_start is None or timecode_length is None:
+#             raise otio.exceptions.NotSupportedError(
+#                 "Unexpected timecode value(s) in mob named: `{}`."
+#                 " `Start`: {}, `Length`: {}".format(mob.name,
+#                                                     timecode_start,
+#                                                     timecode_length)
+#             )
+#
+#         return timecode_start, timecode_length
+#     elif len(timecodes) > 1:
+#         raise otio.exceptions.NotSupportedError(
+#             "Error: mob has more than one timecode slot with different values."
+#             " This is currently not supported by the AAF adapter. Found:"
+#             " {} slots,  mob name is: '{}'".format(len(timecodes), mob.name)
+#         )
+#     else:
+#         return None
 
 
 def _add_child(parent, child, source):
@@ -397,6 +397,150 @@ def _add_child(parent, child, source):
         parent.markers.append(child)
     else:
         parent.append(child)
+
+
+def _find_source_clip(item, op_group_found=None):
+    if isinstance(item, aaf2.components.SourceClip):
+        return item, op_group_found
+    elif isinstance(item, aaf2.components.OperationGroup):
+        return _find_source_clip(item.segments[0], item)
+    elif isinstance(item, aaf2.components.Sequence):
+        comp = [c for c in item.components if not isinstance(c, aaf2.components.Filler) \
+                and not isinstance(c, aaf2.components.ScopeReference)]
+        comp = comp[0] if len(comp) > 0 else None
+        return _find_source_clip(comp, op_group_found)
+    elif isinstance(item, aaf2.components.EssenceGroup):
+        choice = item['Choices'][0] if len(item['Choices']) > 0 else None
+        return _find_source_clip(choice, op_group_found)
+    elif isinstance(item, aaf2.components.NestedScope):
+        slot = item.slots[0] if len(item.slots) > 0 else None
+        return _find_source_clip(slot, op_group_found)
+    elif isinstance(item, aaf2.components.Selector):
+        alt = [a for a in item.alternates.value]
+        alt = alt[0] if len(alt) > 0 else None
+        if alt: return _find_source_clip(item.alternates.value[0], op_group_found)
+        # return _find_source_clip(item.selected.value, op_group_found)
+    elif isinstance(item, aaf2.components.Filler) or not item:
+        return None, None
+    elif isinstance(item, aaf2.components.Pulldown) or not item:
+        return None, None
+    elif isinstance(item, aaf2.components.ScopeReference) or not item:
+        return None, None
+    else:
+        raise AAFAdapterError("Error: _find_source_clip() parsing {} not "
+                              "supported".format(type(item)))
+
+
+def _find_mobslot_timecode(mob, phys_track_num):
+    timecode = (0, 0.0, 'mob slot timecode')
+    slot = [s for s in mob.slots if s['PhysicalTrackNumber'].value == phys_track_num
+            and s.media_kind == 'Timecode']
+    tc = slot[0].segment if len(slot) > 0 else None
+    if isinstance(tc, aaf2.components.Sequence):
+        comps = [c for c in tc.components]
+        tc = comps[0] if len(comps) > 0 else None
+    if isinstance(tc, aaf2.components.Timecode):
+        timecode = (tc.start, float(slot[0].edit_rate), 'mob slot timecode')
+    return timecode
+
+
+def _absolute_offset_from_tc_chain(timecode_chain, edit_rate, mob_chain):
+    frame_count = 0
+    for start, rate, source in timecode_chain:
+        if start == 0:
+            continue
+        elif rate == edit_rate:
+            frame_count += start
+        else:
+            if rate <= 0:
+                err = "Error: an incompatible rate of {} has been found when " \
+                      "attempting to calculate the source timecode value for clip {}"
+                raise AAFAdapterError(err.format(rate, mob_chain[0].name))
+            frame_count += int(round(start / (rate / edit_rate)))
+    return frame_count
+
+
+def _find_mob_chain_and_timecode(source_clip, edit_rate):
+    """ This is combining several processes in to one for efficiency:
+         - Traversing the SourceClip's Mob structure using the clip_id to return all
+           the necessary Mobs.
+         - Extracting the necessary Start/Origin/Offset values for each object, and
+           converts the rate if necessary. This value can come from several different
+           places.
+         - Searching for Operation Group objects that may contain information on how to
+           correctly calculate the starting frame value.
+         - Storing the individual SourceClips so that at the end of the process the
+           correct Length can be derived from the MasterMob."""
+
+    if not isinstance(source_clip, aaf2.components.SourceClip):
+        raise AAFAdapterError("Error: _find_mob_chain() requires a SourceClip component"
+                              " - cannot parse {}".format(type(source_clip)))
+
+    mob_chain = [source_clip.mob]
+    source_clip_chain = []
+    timecode_chain = []
+    source_start_multiplier = None
+    slot_id = source_clip.slot_id
+
+    for mob in mob_chain:
+        if hasattr(mob, 'descriptor') \
+                and mob.descriptor.name in ['TapeDescriptor', 'ImportDescriptor']:
+            timecode_chain.append(_find_mobslot_timecode(mob, 1))
+            # Doing this so mob_chain and source_clip_chain will always have the same
+            # number of values for zip function used below
+            source_clip_chain.append(None)
+            continue
+        elif not mob:
+            continue
+
+        slot = [s for s in mob.slots if s.slot_id == slot_id]
+        slot = slot[0] if len(slot) > 0 else None
+        result = _find_source_clip(slot.segment) if slot else (None, None)
+        mob_source_clip, op_group_found = result
+
+        if mob_source_clip and mob_source_clip.mob:
+            # Handle source clip and associate mob
+            slot_id = mob_source_clip.slot_id
+            mob_chain.append(mob_source_clip.mob)
+            source_clip_chain.append(mob_source_clip)
+
+            # If an operation group was discovered during the _find_source_clip()
+            # process, check for a time effect which may change the starting frame value
+            time_effect = None
+            if op_group_found and op_group_found.operation.name == 'Motion Control':
+                op_stack = _transcribe(op_group_found, list(), edit_rate)
+                time_effect = op_stack.effects[0] if len(op_stack.effects) > 0 else None
+
+            time_scalar = time_effect.time_scalar if hasattr(time_effect, 'time_scalar') else None
+            if time_scalar:
+                if source_start_multiplier:
+                    err = "Error: multiple source multipliers found during search of " \
+                          "source clip mob chain - this is not currently supported."
+                    raise AAFAdapterError(err)
+                source_start_multiplier = time_scalar
+
+            # Adding source_clip start value to tc chain
+            sc_tc = (mob_source_clip.start, float(slot.edit_rate), 'source clip start')
+            timecode_chain.append(sc_tc)
+            # Looking for matching mobs slot time code object
+            ms_tc = _find_mobslot_timecode(mob, slot['PhysicalTrackNumber'].value)
+            timecode_chain.append(ms_tc)
+            # Adding mob slot origin - usually '0' but still needs to be included
+            oring_tc = (slot.origin, float(slot.edit_rate), 'origin')
+            timecode_chain.append(oring_tc)
+
+    frame_count = _absolute_offset_from_tc_chain(timecode_chain, edit_rate, mob_chain)
+
+    length = source_clip.length
+    for mob, sc in zip(mob_chain, source_clip_chain):
+        if isinstance(mob, aaf2.mobs.MasterMob):
+            length = sc.length
+            break
+    if length <= 0:
+        err = "Error: SourceClip coming through with length {}"
+        raise AAFAdapterError(err.format(length))
+
+    return mob_chain, (frame_count, length), source_start_multiplier
 
 
 def _transcribe(item, parents, edit_rate, indent=0):
@@ -451,7 +595,7 @@ def _transcribe(item, parents, edit_rate, indent=0):
             # this track and use it for the Timeline's global_start_time
             start_time = _find_timecode_track_start(track)
             if start_time:
-                result.global_start_time = start_time
+                result.global_start_time, metadata["IsDropFrame"] = start_time
 
     elif isinstance(item, aaf2.components.SourceClip):
         clipUsage = None
@@ -468,18 +612,16 @@ def _transcribe(item, parents, edit_rate, indent=0):
         _transcribe_log(itemMsg, indent)
         result = otio.schema.Clip()
 
-        # store source mob usage to allow OTIO pipelines to adapt downstream
-        # example: pipeline code adjusting source_range and name for subclips only
-        metadata["SourceMobUsage"] = clipUsage or ""
-
-        # Evidently the last mob is the one with the timecode
-        mobs = _find_timecode_mobs(item)
-
-        # Get the Timecode start and length values
-        last_mob = mobs[-1] if mobs else None
-        timecode_info = _extract_timecode_info(last_mob) if last_mob else None
+        # Get all relevant mobs down the tree and their source clips
+        # These are necessary for calculating correct starting values
+        mc_tc_info = _find_mob_chain_and_timecode(item, edit_rate)
+        mobs, timecode_info, source_start_multiplier = mc_tc_info
 
         source_start = int(metadata.get("StartTime", "0"))
+
+        if source_start_multiplier:
+            source_start = int(source_start * source_start_multiplier)
+
         source_length = item.length
         media_start = source_start
         media_length = item.length
@@ -507,61 +649,44 @@ def _transcribe(item, parents, edit_rate, indent=0):
         # The goal here is to find an available range. Media ranges are stored
         # in the related MasterMob, and there should only be one - hence the name
         # "Master" mob. Somewhere down our chain (either a child or our parents)
-        # is a MasterMob.
-        # There are some special cases where the masterMob could be:
-        # 1) For SourceClips in the CompositionMob, the mob the SourceClip is
-        #    referencing can be our MasterMob.
-        # 2) If the source clip is referencing another CompositionMob,
-        #    drill down to see if the composition holds the MasterMob
-        # 3) For everything else, it is a previously encountered parent. Find the
-        #    MasterMob in our chain, and then extract the information from that.
-
-        child_mastermob, composition_user_metadata = \
-            _find_mastermob_for_sourceclip(item)
-
-        if composition_user_metadata:
-            metadata['UserComments'] = composition_user_metadata
-
+        # is a MasterMob. For SourceClips in the CompositionMob, it is one of the
+        # items in the mob chain. For everything else, it is a previously encountered
+        # parent. Find the MasterMob in our chain, and then extract the information
+        # from that.
+        child_mastermob = [m for m in mobs if isinstance(m, aaf2.mobs.MasterMob)]
+        child_mastermob = child_mastermob[0] if len(child_mastermob) > 0 else None
         parent_mastermobs = [
             parent for parent in parents
             if isinstance(parent, aaf2.mobs.MasterMob)
         ]
         parent_mastermob = parent_mastermobs[0] if len(parent_mastermobs) > 1 else None
-
-        if child_mastermob:
-            _transcribe_log("[found child_mastermob]", indent)
-        elif parent_mastermob:
-            _transcribe_log("[found parent_mastermob]", indent)
-        else:
-            _transcribe_log("[found no mastermob]", indent)
-
         mastermob = child_mastermob or parent_mastermob or None
 
         if mastermob:
-            # Get target path
-            mastermob_child = _transcribe(mastermob, list(), edit_rate, indent)
+            mastermob_metadata = {}
+            mastermob_metadata["Name"] = _get_name(mastermob)
+            mastermob_metadata["ClassName"] = _get_class_name(mastermob)
+            for prop in mastermob.properties():
+                if hasattr(prop, 'name') and hasattr(prop, 'value'):
+                    key = str(prop.name)
+                    value = prop.value
+                    mastermob_metadata[key] = _transcribe_property(value)
 
-            target_path = (mastermob_child.metadata.get("AAF", {})
-                                                   .get("UserComments", {})
-                                                   .get("UNC Path"))
+            target_path = (mastermob_metadata.get("UserComments", {})
+                                             .get("UNC Path"))
+
+            # If targat_path is not present in the MasterMob metadata, go through all
+            # to mobs to find one with a Locator object
             if not target_path:
-                # retrieve locator form the MasterMob's Essence
-                for mobslot in mastermob.slots:
-                    if isinstance(mobslot.segment, aaf2.components.SourceClip):
-                        sourcemob = mobslot.segment.mob
-                        locator = None
-                        # different essences store locators in different places
-                        if (isinstance(sourcemob.descriptor,
-                                       aaf2.essence.DigitalImageDescriptor)
-                                and sourcemob.descriptor.locator):
-                            locator = sourcemob.descriptor.locator[0]
-                        elif "Locator" in sourcemob.descriptor:
-                            locator = sourcemob.descriptor["Locator"].value[0]
+                for mob in mobs:
+                    if hasattr(mob, 'descriptor') \
+                            and hasattr(mob.descriptor, 'locator') \
+                            and len(mob.descriptor.locator) > 0:
+                        locator = mob.descriptor.locator[0]
+                        target_path = locator["URLString"].value
+                        break
 
-                        if locator:
-                            target_path = locator["URLString"].value
-
-            # if we have target path, create an ExternalReference, otherwise
+            # If we have target path, create an ExternalReference, otherwise
             # create an MissingReference.
             if target_path:
                 if not target_path.startswith("file://"):
@@ -575,21 +700,21 @@ def _transcribe(item, parents, edit_rate, indent=0):
                 otio.opentime.RationalTime(media_start, edit_rate),
                 otio.opentime.RationalTime(media_length, edit_rate)
             )
-
-            # Copy the metadata from the master into the media_reference
-            clip_metadata = copy.deepcopy(mastermob_child.metadata.get("AAF", {}))
-
-            # If the composition was holding UserComments and the current masterMob has
-            # no UserComments, use the ones from the CompositionMob. But if the
-            # masterMob has any, prefer them over the compositionMob, since the
-            # masterMob is the ultimate authority for a source clip.
-            if composition_user_metadata:
-                if "UserComments" not in clip_metadata:
-                    clip_metadata['UserComments'] = composition_user_metadata
-
-            media.metadata["AAF"] = clip_metadata
-
+            # copy the metadata from the master into the media_reference
+            media.metadata["AAF"] = mastermob_metadata
             result.media_reference = media
+
+        # Last check to make sure we're getting a appropriate names
+        if metadata["Name"] == "Untitled SourceClip" or metadata["Name"] is None:
+            for mob in mobs:
+                if mob.name != '' and mob.name is not None:
+                    metadata["Name"] = mob.name
+                    break
+
+        last_mob = mobs[-1]
+        if hasattr(last_mob, 'descriptor') \
+                and last_mob.descriptor.name == 'TapeDescriptor':
+            metadata["TapeName"] = last_mob.name
 
     elif isinstance(item, aaf2.components.Transition):
         _transcribe_log("Creating Transition for {}".format(
@@ -754,23 +879,58 @@ def _transcribe(item, parents, edit_rate, indent=0):
     elif isinstance(item, aaf2.components.Selector):
         msg = "Transcribe selector for  {}".format(_encoded_name(item))
         _transcribe_log(msg, indent)
-        # If you mute a clip in media composer, it becomes one of these in the
-        # AAF.
-        result = _transcribe(item.getvalue("Selected"),
-                             parents + [item], edit_rate, indent + 2)
 
-        alternates = [
-            _transcribe(alt, parents + [item], edit_rate, indent + 2)
-            for alt in item.getvalue("Alternates")
-        ]
+        result = None
+        # First we check to see if the Selected component is a Filler object,
+        # meaning that this is a muted/disabled object of some kind
+        if isinstance(item.getvalue('Selected'), aaf2.components.Filler):
+            # Get the first element of the alternates list and transcribe
+            assert len(item.getvalue('Alternates')) == 1
+            alt = item.getvalue('Alternates')[0]
+            result = _transcribe(alt, parents + [item], edit_rate)
 
-        # muted case -- if there is only one item its muted, otherwise its
-        # a multi cam thing
-        if alternates and len(alternates) == 1:
-            metadata['muted_clip'] = True
-            result.name = str(alternates[0].name) + "_MUTED"
+            # We set the enabled status of the result object to False to
+            # indicate the correct status
+            result.enabled = False
 
-        metadata['alternates'] = alternates
+            # Muted tracks are handled in a slightly odd way so we need to do a
+            # check here and pass the param back up to the track object
+            if isinstance(parents[-1], aaf2.mobslots.TimelineMobSlot):
+                # TODO: Pass muted status back up to parent track object
+                assert False # Need to catch this to know how to properly implement
+
+        # A brute force check to see if what we're dealing with is a muted track
+        # if isinstance(parents[-1], aaf2.mobslots.TimelineMobSlot) and \
+        #         isinstance(item.getvalue('Selected'), aaf2.components.Filler):
+        #     alt = item.getvalue('Alternates')[0]
+        #     result = _transcribe(alt, parents + [item], edit_rate)
+
+        else:
+            # If you mute a clip in media composer, it becomes one of these in the
+            # AAF.
+            result = _transcribe(item.getvalue("Selected"), parents + [item], edit_rate)
+
+            # A Selector can have a set of alternates to designate either a multicam clip
+            # or a clip that has been muted on the timeline - here we do a ful parse on
+            # all the objects being held there
+            alternates = item.getvalue("Alternates", None)
+            if alternates is not None:
+                alternates = [
+                    _transcribe(alt, parents + [item], edit_rate)
+                    for alt in alternates
+                ]
+
+            # If the "Selected" object is a "Filler" object, then it is a muted clip and
+            # will result in an OTIO Gap object. This should mean that the muted clips exists
+            # in the alternates list
+            if isinstance(result, otio.schema.Gap) \
+                    and alternates is not None \
+                    and len(alternates) == 1:
+                raise AAFAdapterError("This shouldn't be happening...")
+                # metadata['muted_clip'] = True
+                # result.name = str(alternates[0].name)
+
+            metadata['alternates'] = alternates
 
     # @TODO: There are a bunch of other AAF object types that we will
     # likely need to add support for. I'm leaving this code here to help
@@ -839,7 +999,7 @@ def _transcribe(item, parents, edit_rate, indent=0):
     # There's a bit more we can do before we're ready to return the result.
 
     # If we didn't get a name yet, use the one we have in metadata
-    if not result.name:
+    if not result.name and metadata["Name"] is not None:
         result.name = metadata["Name"]
 
     # Attach the AAF metadata
@@ -885,16 +1045,20 @@ def _find_timecode_track_start(track):
     # See if we can find a starting timecode in here...
     aaf_metadata = track.metadata.get("AAF", {})
 
+    if aaf_metadata["ClassName"] != "TimelineMobSlot":
+        return
+
     # Is this a Timecode track?
     if aaf_metadata.get("MediaKind") not in {"Timecode", "LegacyTimecode"}:
         return
 
     # Edit Protocol section 3.6 specifies PhysicalTrackNumber of 1 as the
     # Primary timecode
+    physical_track_number = None
     try:
         physical_track_number = aaf_metadata["PhysicalTrackNumber"]
     except KeyError:
-        raise AAFAdapterError("Timecode missing 'PhysicalTrackNumber'")
+        pass
 
     if physical_track_number != 1:
         return
@@ -902,6 +1066,7 @@ def _find_timecode_track_start(track):
     try:
         edit_rate = fractions.Fraction(aaf_metadata["EditRate"])
         start = aaf_metadata["Segment"]["Start"]
+        drop = aaf_metadata["Segment"]["Drop"]
     except KeyError as e:
         raise AAFAdapterError(
             "Timecode missing '{}'".format(e)
@@ -915,96 +1080,96 @@ def _find_timecode_track_start(track):
     return otio.opentime.RationalTime(
         value=int(start),
         rate=rate,
-    )
+    ), drop
 
-
-def _find_mastermob_for_sourceclip(aaf_sourceclip):
-    """
-    For a given soure clip, find the related masterMob.
-    Returns a tuple of (MasterMob, compositionMetadata), where
-    MasterMob is an AAF MOB object and compositionMetadata a
-    dictionary, extracted from the AAF Tagged Values of UserComments
-    (i.e. user metadata)
-    """
-
-    # If the mobId of the sourceclip is a mastermob, just return that, we are done.
-    if isinstance(aaf_sourceclip.mob, aaf2.mobs.MasterMob):
-        return aaf_sourceclip.mob, None
-
-    # There are cases where a composition mob is used as an indirection
-    # to the mastermob. In that case the SourceClip points to a
-    # CompositionMob instead of a MasterMob. Drill down into the CompositionMob
-    # to find the MasterMob related to this SourceClip
-    return _get_master_mob_from_source_composition(aaf_sourceclip.mob)
-
-
-def _get_master_mob_from_source_composition(compositionMob):
-    """
-    This code covers two special cases:
-    if the passed in source-clip-mob is a composition, drill down
-    and try to find the master mob in that composition.
-
-    Also, there seems to be a workflow where metadata, specifically UserComments
-    are shared between SourceClips via a CompositionMob, in which case there are
-    no UserComments on the MasterMob (as we expect in the default case)
-
-    So if we find UserComments on the Composition but not on the MasterMob, we
-    return that metadata, so it can be added to the clip (instead of the
-    master mob UserComments)
-
-    """
-
-    # If not a composition, we can't discover anything
-    if not isinstance(compositionMob, aaf2.mobs.CompositionMob):
-        return None, None
-
-    compositionMetadata = _get_composition_user_comments(compositionMob)
-
-    # Iterate over the TimelineMobSlots and extract any source_clips we find.
-    source_clips = []
-    for slot in compositionMob.slots:
-        if isinstance(slot, aaf2.mobslots.TimelineMobSlot):
-            if isinstance(slot.segment, aaf2.components.SourceClip):
-                source_clips.append(slot.segment)
-
-    # No source clips, no master mob. But we still want to return
-    # the composition metadata. If there is another mastermob found 'upstream',
-    # but it does not have any UserComments metadata, we still want to use
-    # the CompositionMob's metadata.
-    if not source_clips:
-        return None, compositionMetadata
-
-    # Only expect one source clip for this case.
-    # Are there cases where we can have more than one?
-    if len(source_clips) > 1:
-        print("Found more than one Source Clip ({}) for sourceClipComposition case. "
-              "This is unexpected".format(len(source_clips)))
-
-    # We only look at the first source clip right now...
-    source_clip = source_clips[0]
-
-    # Not referencing a master mob? Nothing to return
-    if not isinstance(source_clip.mob, aaf2.mobs.MasterMob):
-        return None, compositionMetadata
-
-    # Found a master mob, return this and also compositionMetadata (if we found any)
-    return (source_clip.mob, compositionMetadata)
-
-
-def _get_composition_user_comments(compositionMob):
-    compositionMetadata = {}
-
-    if not isinstance(compositionMob, aaf2.mobs.CompositionMob):
-        return compositionMetadata
-
-    compositionMobUserComments = list(compositionMob.get("UserComments", []))
-    for prop in compositionMobUserComments:
-        key = str(prop.name)
-        value = prop.value
-        compositionMetadata[key] = _transcribe_property(value)
-
-    return compositionMetadata
-
+#
+# def _find_mastermob_for_sourceclip(aaf_sourceclip):
+#     """
+#     For a given soure clip, find the related masterMob.
+#     Returns a tuple of (MasterMob, compositionMetadata), where
+#     MasterMob is an AAF MOB object and compositionMetadata a
+#     dictionary, extracted from the AAF Tagged Values of UserComments
+#     (i.e. user metadata)
+#     """
+#
+#     # If the mobId of the sourceclip is a mastermob, just return that, we are done.
+#     if isinstance(aaf_sourceclip.mob, aaf2.mobs.MasterMob):
+#         return aaf_sourceclip.mob, None
+#
+#     # There are cases where a composition mob is used as an indirection
+#     # to the mastermob. In that case the SourceClip points to a
+#     # CompositionMob instead of a MasterMob. Drill down into the CompositionMob
+#     # to find the MasterMob related to this SourceClip
+#     return _get_master_mob_from_source_composition(aaf_sourceclip.mob)
+#
+#
+# def _get_master_mob_from_source_composition(compositionMob):
+#     """
+#     This code covers two special cases:
+#     if the passed in source-clip-mob is a composition, drill down
+#     and try to find the master mob in that composition.
+#
+#     Also, there seems to be a workflow where metadata, specifically UserComments
+#     are shared between SourceClips via a CompositionMob, in which case there are
+#     no UserComments on the MasterMob (as we expect in the default case)
+#
+#     So if we find UserComments on the Composition but not on the MasterMob, we
+#     return that metadata, so it can be added to the clip (instead of the
+#     master mob UserComments)
+#
+#     """
+#
+#     # If not a composition, we can't discover anything
+#     if not isinstance(compositionMob, aaf2.mobs.CompositionMob):
+#         return None, None
+#
+#     compositionMetadata = _get_composition_user_comments(compositionMob)
+#
+#     # Iterate over the TimelineMobSlots and extract any source_clips we find.
+#     source_clips = []
+#     for slot in compositionMob.slots:
+#         if isinstance(slot, aaf2.mobslots.TimelineMobSlot):
+#             if isinstance(slot.segment, aaf2.components.SourceClip):
+#                 source_clips.append(slot.segment)
+#
+#     # No source clips, no master mob. But we still want to return
+#     # the composition metadata. If there is another mastermob found 'upstream',
+#     # but it does not have any UserComments metadata, we still want to use
+#     # the CompositionMob's metadata.
+#     if not source_clips:
+#         return None, compositionMetadata
+#
+#     # Only expect one source clip for this case.
+#     # Are there cases where we can have more than one?
+#     if len(source_clips) > 1:
+#         print("Found more than one Source Clip ({}) for sourceClipComposition case. "
+#               "This is unexpected".format(len(source_clips)))
+#
+#     # We only look at the first source clip right now...
+#     source_clip = source_clips[0]
+#
+#     # Not referencing a master mob? Nothing to return
+#     if not isinstance(source_clip.mob, aaf2.mobs.MasterMob):
+#         return None, compositionMetadata
+#
+#     # Found a master mob, return this and also compositionMetadata (if we found any)
+#     return (source_clip.mob, compositionMetadata)
+#
+#
+# def _get_composition_user_comments(compositionMob):
+#     compositionMetadata = {}
+#
+#     if not isinstance(compositionMob, aaf2.mobs.CompositionMob):
+#         return compositionMetadata
+#
+#     compositionMobUserComments = list(compositionMob.get("UserComments", []))
+#     for prop in compositionMobUserComments:
+#         key = str(prop.name)
+#         value = prop.value
+#         compositionMetadata[key] = _transcribe_property(value)
+#
+#     return compositionMetadata
+#
 
 def _transcribe_linear_timewarp(item, parameters):
     # this is a linear time warp
@@ -1235,12 +1400,13 @@ def _attach_markers(collection):
                 track_number = metadata.get("AttachedPhysicalTrackNumber")
                 target_track = tracks_map.get((slot_id, track_number))
                 if target_track is None:
-                    raise AAFAdapterError(
-                        "Marker '{}' cannot be attached to an item. SlotID: '{}', "
-                        "PhysicalTrackNumber: '{}'".format(
-                            marker.name, slot_id, track_number
-                        )
-                    )
+                    # raise AAFAdapterError(
+                    #     "Marker '{}' cannot be attached to an item. SlotID: '{}', "
+                    #     "PhysicalTrackNumber: '{}'".format(
+                    #         marker.name, slot_id, track_number
+                    #     )
+                    # )
+                    continue
 
                 # remove marker from current parent track
                 current_track.markers.remove(marker)
