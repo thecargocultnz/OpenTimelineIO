@@ -1513,6 +1513,9 @@ def _simplify(thing):
                     # Note: we don't merge effects, because we already made
                     # sure the child had no effects in the if statement above.
 
+                    # Preserve the enabled/disabled state as we merge these two.
+                    thing.enabled = thing.enabled and child.enabled
+
                     c = c + num
                 c = c - 1
 
@@ -1520,14 +1523,23 @@ def _simplify(thing):
         if _is_redundant_container(thing):
             # TODO: We may be discarding metadata here, should we merge it?
             result = thing[0].deepcopy()
+
+            # As we are reducing the complexity of the object structure through
+            # this process, we need to make sure that any/all enabled statuses
+            # are being respected and applied in an appropriate way
+            if not thing.enabled:
+                result.enabled = False
+
             # TODO: Do we need to offset the markers in time?
             result.markers.extend(thing.markers)
+
             # TODO: The order of the effects is probably important...
             # should they be added to the end or the front?
             # Intuitively it seems like the child's effects should come before
             # the parent's effects. This will need to be solidified when we
             # add more effects support.
             result.effects.extend(thing.effects)
+
             # Keep the parent's length, if it has one
             if thing.source_range:
                 # make sure it has a source_range first
