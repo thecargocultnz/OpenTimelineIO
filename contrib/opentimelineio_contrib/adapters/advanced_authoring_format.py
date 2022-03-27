@@ -881,9 +881,12 @@ def _transcribe(item, parents, edit_rate, indent=0):
         _transcribe_log(msg, indent)
 
         result = None
+        selected = item.getvalue('Selected')
+        selected_is_filler = isinstance(selected, aaf2.components.Filler)
         # First we check to see if the Selected component is a Filler object,
         # meaning that this is a muted/disabled object of some kind
-        if isinstance(item.getvalue('Selected'), aaf2.components.Filler):
+        if selected_is_filler or \
+                isinstance(selected, aaf2.components.ScopeReference):
             # Get the first element of the alternates list and transcribe
             assert len(item.getvalue('Alternates')) == 1
             alt = item.getvalue('Alternates')[0]
@@ -891,23 +894,17 @@ def _transcribe(item, parents, edit_rate, indent=0):
 
             # We set the enabled status of the result object to False to
             # indicate the correct status
-            result.enabled = False
+            if selected_is_filler:
+                result.enabled = False
 
             # Muted tracks are handled in a slightly odd way so we need to do a
             # check here and pass the param back up to the track object
-            if isinstance(parents[-1], aaf2.mobslots.TimelineMobSlot):
+            # if isinstance(parents[-1], aaf2.mobslots.TimelineMobSlot):
                 # TODO: Pass muted status back up to parent track object
-                assert False # Need to catch this to know how to properly implement
-
-        # A brute force check to see if what we're dealing with is a muted track
-        # if isinstance(parents[-1], aaf2.mobslots.TimelineMobSlot) and \
-        #         isinstance(item.getvalue('Selected'), aaf2.components.Filler):
-        #     alt = item.getvalue('Alternates')[0]
-        #     result = _transcribe(alt, parents + [item], edit_rate)
+                # assert False # Need to catch this to know how to properly implement
 
         else:
-            # If you mute a clip in media composer, it becomes one of these in the
-            # AAF.
+            # If you mute a clip in media composer, it becomes one of these in the AAF.
             result = _transcribe(item.getvalue("Selected"), parents + [item], edit_rate)
 
             # A Selector can have a set of alternates to designate either a multicam clip
@@ -926,9 +923,7 @@ def _transcribe(item, parents, edit_rate, indent=0):
             if isinstance(result, otio.schema.Gap) \
                     and alternates is not None \
                     and len(alternates) == 1:
-                raise AAFAdapterError("This shouldn't be happening...")
-                # metadata['muted_clip'] = True
-                # result.name = str(alternates[0].name)
+                raise AAFAdapterError("AAF Selector parsing error: {}".format(type(item)))
 
             metadata['alternates'] = alternates
 
