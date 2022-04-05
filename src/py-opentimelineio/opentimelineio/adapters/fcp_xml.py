@@ -962,7 +962,7 @@ class FCP7XMLParser:
         start_value = int(item_element.find("./start").text)
         end_value = int(item_element.find("./end").text)
 
-        if start_value == -1:
+        if start_value == -1 and head_transition:
             # determine based on the cut point of the head transition
             start = _transition_cut_point(head_transition, context)
 
@@ -979,7 +979,7 @@ class FCP7XMLParser:
             start = opentime.RationalTime(start_value, parent_rate)
             start_offset = opentime.RationalTime()
 
-        if end_value == -1:
+        if end_value == -1 and tail_transition:
             # determine based on the cut point of the tail transition
             end = _transition_cut_point(tail_transition, context)
         else:
