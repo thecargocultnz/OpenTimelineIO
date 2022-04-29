@@ -880,50 +880,48 @@ def _transcribe(item, parents, edit_rate, indent=0):
         msg = "Transcribe selector for  {}".format(_encoded_name(item))
         _transcribe_log(msg, indent)
 
-        result = None
         selected = item.getvalue('Selected')
-        selected_is_filler = isinstance(selected, aaf2.components.Filler)
-        # First we check to see if the Selected component is a Filler object,
-        # meaning that this is a muted/disabled object of some kind
-        if selected_is_filler or \
-                isinstance(selected, aaf2.components.ScopeReference):
-            # Get the first element of the alternates list and transcribe
-            assert len(item.getvalue('Alternates')) == 1
-            alt = item.getvalue('Alternates')[0]
-            result = _transcribe(alt, parents + [item], edit_rate)
+        alternates = item.getvalue('Alternates', None)
 
-            # We set the enabled status of the result object to False to
-            # indicate the correct status
-            if selected_is_filler:
-                result.enabled = False
+        # First we check to see if the Selected component is either a Filler
+        # or ScopeReference object, meaning we have to use the alternate instead
+        if isinstance(selected, aaf2.components.Filler) or \
+                isinstance(selected, aaf2.components.ScopeReference):
+
+            # Safety check of the alternates list, then transcribe first object -
+            # there should only ever be one alternate in this situation
+            if alternates is None or len(alternates) != 1:
+                err = "AAF Selector parsing error: object has unexpected number of " \
+                      "alternates - {}".format(len(alternates))
+                raise AAFAdapterError(err)
+            result = _transcribe(alternates[0], parents + [item], edit_rate, indent + 2)
+
+            # Filler/ScopeReference means the clip is muted/not enabled
+            result.enabled = False
 
             # Muted tracks are handled in a slightly odd way so we need to do a
             # check here and pass the param back up to the track object
             # if isinstance(parents[-1], aaf2.mobslots.TimelineMobSlot):
-                # TODO: Pass muted status back up to parent track object
-                # assert False # Need to catch this to know how to properly implement
+            #     pass # TODO: Figure out mechanism for passing this up to parent
 
         else:
-            # If you mute a clip in media composer, it becomes one of these in the AAF.
-            result = _transcribe(item.getvalue("Selected"), parents + [item], edit_rate)
 
-            # A Selector can have a set of alternates to designate either a multicam clip
-            # or a clip that has been muted on the timeline - here we do a ful parse on
-            # all the objects being held there
-            alternates = item.getvalue("Alternates", None)
+            # This is most likely a multi-cam clip
+            result = _transcribe(selected, parents + [item], edit_rate, indent + 2)
+
+            # Perform a check here to make sure no potential Gap objects
+            # are slipping through the cracks
+            if isinstance(result, otio.schema.Gap):
+                err = "AAF Selector parsing error: {}".format(type(item))
+                raise AAFAdapterError(err)
+
+            # A Selector can have a set of alternates to handle multiple options for an
+            # editorial decision - we do a full parse on those obects too
             if alternates is not None:
                 alternates = [
-                    _transcribe(alt, parents + [item], edit_rate)
+                    _transcribe(alt, parents + [item], edit_rate, indent + 2)
                     for alt in alternates
                 ]
-
-            # If the "Selected" object is a "Filler" object, then it is a muted clip and
-            # will result in an OTIO Gap object. This should mean that the muted clips exists
-            # in the alternates list
-            if isinstance(result, otio.schema.Gap) \
-                    and alternates is not None \
-                    and len(alternates) == 1:
-                raise AAFAdapterError("AAF Selector parsing error: {}".format(type(item)))
 
             metadata['alternates'] = alternates
 
