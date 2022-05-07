@@ -777,7 +777,8 @@ def _transcribe(item, parents, edit_rate, indent=0):
             ]
             timeline_slot = timeline_slots[-1]
             if timeline_slot:
-                metadata["PhysicalTrackNumber"] = list(parent.slots).index(item) + 1
+                if hasattr(parent, 'slots'):
+                    metadata["PhysicalTrackNumber"] = list(parent.slots).index(item) + 1
                 metadata["SlotID"] = int(timeline_slot["SlotID"].value)
 
         for component in item.components:
