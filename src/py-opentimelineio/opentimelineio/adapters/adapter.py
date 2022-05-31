@@ -134,7 +134,7 @@ class Adapter(plugins.PythonPlugin):
             not self.has_feature("read_from_file") and
             self.has_feature("read_from_string")
         ):
-            with open(filepath, 'r') as fo:
+            with open(filepath, 'r', encoding="UTF-8") as fo:
                 contents = fo.read()
             result = self._execute_function(
                 "read_from_string",
