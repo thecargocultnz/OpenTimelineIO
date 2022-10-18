@@ -566,7 +566,11 @@ def _transcribe(item, parents, edit_rate, indent=0):
             if hasattr(prop, 'name') and hasattr(prop, 'value'):
                 key = str(prop.name)
                 value = prop.value
-                metadata[key] = _transcribe_property(value, owner=item)
+                try:
+                    metadata[key] = _transcribe_property(value, owner=item)
+                except Exception as e:
+                    _transcribe_log("Error transcribing property for {} - {}".format(key, value), indent)
+                    _transcribe_log(e, indent)
 
     # Now we will use the item's class to determine which OTIO type
     # to transcribe into. Note that the order of this if/elif/... chain
@@ -1325,18 +1329,22 @@ def _fix_transitions(thing):
         or isinstance(thing, otio.schema.SerializableCollection)
     ):
         if isinstance(thing, otio.schema.Track):
-            for c, child in enumerate(thing):
-
+            c = 0
+            removed_clip_idx = None
+            while c < len(thing):
+                child = thing[c]
                 # Don't touch the Transitions themselves,
                 # only the Clips & Gaps next to them.
                 if not isinstance(child, otio.core.Item):
+                    c += 1
                     continue
 
+                clip_removed = False
+
                 # Was the item before us a Transition?
-                if c > 0 and isinstance(
-                    thing[c - 1],
-                    otio.schema.Transition
-                ):
+                if c > 0 and \
+                        isinstance(thing[c - 1], otio.schema.Transition) and \
+                        c != removed_clip_idx:
                     pre_trans = thing[c - 1]
 
                     if child.source_range is None:
@@ -1346,12 +1354,14 @@ def _fix_transitions(thing):
                         start_time=csr.start_time + pre_trans.in_offset,
                         duration=csr.duration - pre_trans.in_offset
                     )
+                    if child.source_range.duration.value == 0:
+                        thing.remove(child)
+                        removed_clip_idx = c
+                        clip_removed = True
 
                 # Is the item after us a Transition?
-                if c < len(thing) - 1 and isinstance(
-                    thing[c + 1],
-                    otio.schema.Transition
-                ):
+                if c < len(thing) - 1 and \
+                        isinstance(thing[c + 1], otio.schema.Transition):
                     post_trans = thing[c + 1]
 
                     if child.source_range is None:
@@ -1361,6 +1371,12 @@ def _fix_transitions(thing):
                         start_time=csr.start_time,
                         duration=csr.duration - post_trans.out_offset
                     )
+                    if child.source_range.duration.value == 0:
+                        thing.remove(child)
+                        removed_clip_idx = c
+                        clip_removed = True
+                if not clip_removed:
+                    c += 1
 
         for child in thing:
             _fix_transitions(child)
