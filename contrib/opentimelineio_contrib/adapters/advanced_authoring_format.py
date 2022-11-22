@@ -1361,7 +1361,8 @@ def _fix_transitions(thing):
 
                 # Is the item after us a Transition?
                 if c < len(thing) - 1 and \
-                        isinstance(thing[c + 1], otio.schema.Transition):
+                        isinstance(thing[c + 1], otio.schema.Transition) and \
+                        not clip_removed:
                     post_trans = thing[c + 1]
 
                     if child.source_range is None:
