@@ -842,11 +842,14 @@ def _transcribe(item, parents, edit_rate, indent=0):
             )
 
             result = otio.schema.Marker()
-            result.name = metadata["Comment"]
+            result.name = metadata.get("Comment", metadata.get("CommentMarkerUser", "")) # Some exporters give CommentMarkerUser instead of Comment (or neither..)
 
             event_mob = event_mobs[-1]
 
-            metadata["AttachedSlotID"] = int(metadata["DescribedSlots"][0])
+            described_slots = metadata.get("DescribedSlots", []) # Some exporters dont give this property
+            if described_slots and len(described_slots) > 0:
+                metadata["AttachedSlotID"] = int(described_slots[0])
+
             metadata["AttachedPhysicalTrackNumber"] = int(
                 event_mob["PhysicalTrackNumber"].value
             )
